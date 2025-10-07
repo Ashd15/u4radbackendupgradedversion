@@ -12,5 +12,6 @@ from api.apiurls.ECG.ecg_upload import upload_ecg_api,update_patient,ecg_stats_a
 from api.apiurls.ECG.ecg_get_views import get_ecg_patients,update_patient_status
 from api.apiurls.doctor.sidebaar import personal_info
 from api.apiurls.loginpage.login import api_login,api_logout
+from api.apiurls.doctor.fetchpatient import FetchDicomData
 
 

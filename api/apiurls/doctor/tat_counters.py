@@ -108,6 +108,7 @@ def fetch_tat_counters(request):
     "radiologist_assigned_at": dicom.radiologist_assigned_at.isoformat() if dicom.radiologist_assigned_at else None,
     "marked_done_at": dicom.marked_done_at.isoformat() if dicom.marked_done_at else None,
     "notes_modified_at": dicom.notes_modified_at.isoformat() if dicom.notes_modified_at else None,
+    "study_instance_uid": dicom.study_instance_uid or "Unknown",
     "contrast_used": dicom.contrast_used,
     "is_follow_up": dicom.is_follow_up,
     "imaging_views": dicom.imaging_views or "None",

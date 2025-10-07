@@ -41,6 +41,8 @@ class DICOMData(models.Model):
     radiologist_assigned_at = models.DateTimeField(null=True, blank=True)
     marked_done_at = models.DateTimeField(null=True, blank=True)
     notes_modified_at = models.DateTimeField(null=True, blank=True)
+
+    study_instance_uid = models.CharField(max_length=100, blank=True, null=True)
     # ✅ New fields
     contrast_used = models.BooleanField(default=False)  # Was contrast used?
     is_follow_up = models.BooleanField(default=False)   # Follow-up / repeat case?

@@ -12,6 +12,8 @@ GROUP_DASHBOARD = {
     'coordinator': '/coordinator',
     'radiologist': '/doctor-dashboard',
     'reviewer': '/viewer',
+    'supercoordinator': '/superCoordinator',
+    'cardiologist': '/ecg-dashboard',
 }
 
 @csrf_exempt

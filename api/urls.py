@@ -5,7 +5,7 @@ from .views import (
     fetch_radiologists, assign_radiologist, replace_radiologist,
     fetch_body_parts, upload_ecg_api, update_patient, ecg_stats_api,
     get_locations, get_ecg_patients, update_patient_status,
-    manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info
+    manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info, FetchDicomData,
 )
 
 urlpatterns = [
@@ -32,4 +32,5 @@ urlpatterns = [
     path('login/', api_login, name='api_login'),
     path('logout/', api_logout, name='api_logout'),
     path('personal-info/', personal_info, name='personal_info'),
+    path('fetch-dicom/', FetchDicomData.as_view(), name='fetch_dicom'),
 ]
