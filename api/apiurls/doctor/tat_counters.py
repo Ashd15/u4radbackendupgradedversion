@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from api.models.DICOMData import DICOMData
-from api.models.Client import ServiceTATSetting, Institution
+from api.models.Client import ServiceTATSetting, Institution,Client
 from datetime import datetime, timedelta
 import pytz
 
@@ -22,7 +22,14 @@ def fetch_tat_counters(request):
         dicoms = DICOMData.objects.filter(radiologist__user=user)
     else:
         # For other users, maybe return empty or restrict
-        dicoms = DICOMData.objects.none()
+        try:
+            client = Client.objects.get(user=user)
+            # Get all institutions mapped to this client
+            institutions = client.institutions.all()
+            # Filter DICOMData for these institutions
+            dicoms = DICOMData.objects.filter(institution_name__in=[i.name for i in institutions])
+        except Client.DoesNotExist:
+            dicoms = DICOMData.objects.none()  # No DICOMs if user not mapped
 
     data = []
     now = datetime.now(pytz.utc)
