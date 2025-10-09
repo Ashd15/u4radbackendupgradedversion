@@ -1,4 +1,9 @@
+from django.conf import settings
 from django.urls import path
+from django.conf.urls.static import static
+
+from api.Ecg_cardiologist import views_report
+from api.Ecg_cardiologist.views_cardio import GreetingAPIView, LocationListAPIView, PatientDetailAPIView, PatientListAPIView
 from .views import (
     fetch_tat_counters, server_data, dicom_list, update_dicom,
     upload_history_file, fetch_patient_reports, get_all_coordinators,
@@ -7,6 +12,7 @@ from .views import (
     get_locations, get_ecg_patients, update_patient_status,
     manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info, FetchDicomData,
 )
+from .apiurls.ECG.ecg_download import fetch_ecg_pdf_reports, download_ecg_pdf_report
 
 urlpatterns = [
     path('fetch-tat-counters/', fetch_tat_counters),
@@ -28,9 +34,22 @@ urlpatterns = [
     path('cardiologists/', get_cardiologists, name='get_cardiologists'),
     path("ecg_patients/<int:patient_id>/", update_patient, name="update_patient"),
     path('ecg_stats/', ecg_stats_api, name='ecg_stats_api'),
+    path('ecg-reports/', fetch_ecg_pdf_reports, name='fetch_ecg_pdf_reports'),
+    path('ecg-reports/download/<int:report_id>/', download_ecg_pdf_report, name='download_ecg_pdf_report'),
     path('upload-patient-ecgs/', upload_patient_ecg_api, name='upload_patient_ecg_api'),
     path('login/', api_login, name='api_login'),
     path('logout/', api_logout, name='api_logout'),
     path('personal-info/', personal_info, name='personal_info'),
     path('fetch-dicom/', FetchDicomData.as_view(), name='fetch_dicom'),
+    #cardiologist
+    path('greeting/', GreetingAPIView.as_view(), name='greeting-api'),
+    path('get_locations/', LocationListAPIView.as_view(), name='get_locations'),
+    path('patients_ecg/', PatientListAPIView.as_view(), name='patients-list'),
+    path('patients_ecg/<int:pk>/', PatientDetailAPIView.as_view(), name='patients-detail'),
+    path('report/preview/', views_report.report_preview, name='report-preview'),
+    path('report/finalize/', views_report.report_finalize, name='report-finalize'),
+    path('report_reject/', views_report.report_reject, name='report_reject'),
+    path('ecg_stat/', views_report.ecg_stat, name='ecg_stat'),
 ]
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

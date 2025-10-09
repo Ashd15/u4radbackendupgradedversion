@@ -11,6 +11,8 @@ from api.models.City import City
 from api.models.patientdetails import PatientDetails
 from api.models.Total_cases import Total_Cases
 import json
+from PyPDF2 import PdfReader
+from pdf2image import convert_from_bytes
 from django.core.exceptions import ObjectDoesNotExist
 from api.forms import ECGUploadForm
 import PyPDF2
@@ -139,114 +141,97 @@ def clean_page_data(first_page_text):
 
 
 
+
 @csrf_exempt
 def upload_ecg_api(request):
     success_details = []
-    rejected_details = []
     missing_id = []
     processing_error = []
 
-    if request.method == 'POST':
-        form = ECGUploadForm(request.POST, request.FILES)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Use POST method only'})
 
-        # Get the uploaded files as a list
-        ecg_files = request.FILES.getlist('ecg_file')
+    form = ECGUploadForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return JsonResponse({'success': False, 'error': 'Form not valid', 'form_errors': form.errors})
 
-        # Enforce max files manually (optional)
-        MAX_FILES = 50
-        if len(ecg_files) > MAX_FILES:
-            return JsonResponse({'success': False, 'error': f'Maximum {MAX_FILES} files allowed.'})
+    location = form.cleaned_data['location']
+    ecg_files = request.FILES.getlist('ecg_file[]') or request.FILES.getlist('ecg_file')
 
-        if form.is_valid():
-            location = form.cleaned_data['location']
+    for ecg_file in ecg_files:
+        try:
+            pdf_bytes = ecg_file.read()
+            if not pdf_bytes:
+                raise ValueError("Empty file")
+        except Exception as e:
+            processing_error.append({'name': ecg_file.name, 'error': f"File read error: {str(e)}"})
+            continue
 
-            for ecg_file in ecg_files:
-                try:
-                    pdf_bytes = ecg_file.read()
-                except Exception as e:
-                    processing_error.append({'id': None, 'name': ecg_file.name})
-                    continue
+        # Extract text for patient ID
+        try:
+            pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+            first_page_text = pdf_reader.pages[0].extract_text() or ""
+        except Exception:
+            first_page_text = ""
 
-                def clean_text(text):
-                    return text.replace('\x00', '').strip() if text else ''
+        # Extract patient ID (replace with your function)
+        patient_id = extract_patient_id(first_page_text)
+        if not patient_id:
+            missing_id.append({'id': None, 'name': ecg_file.name})
+            continue
 
-                pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+        # Ensure unique PatientId
+        original_patient_id = patient_id
+        suffix = 1
+        while PatientDetails.objects.filter(PatientId=patient_id).exists():
+            suffix += 1
+            patient_id = f"{original_patient_id}-{suffix}"
 
-                for page_number, page in enumerate(pdf_reader.pages):
-                    first_page_text = clean_text(page.extract_text())
-                    first_page_text = deduplicate_text(first_page_text)
+        # Extract other patient info
+        patient_name = extract_patient_name(first_page_text)
+        patient_age = extract_patient_age(first_page_text)
+        patient_gender = extract_patient_gender(first_page_text)
+        heart_rate = extract_heart_rate(first_page_text)
+        pr_interval = extract_pr_interval(first_page_text)
+        formatted_date = extract_date(first_page_text)
+        date_obj, _ = Date.objects.get_or_create(date_field=formatted_date, location=location)
 
-                    extraSpace = False
-                    if "A c q u i r e d  o n :" in first_page_text:
-                        first_page_text = clean_page_data(first_page_text)
-                        patient_id = str(first_page_text).split("Id:")[1].split("Name:")[0].strip()
-                        extraSpace = True
+        # Create patient record
+        patient = PatientDetails.objects.create(
+            PatientId=patient_id,
+            PatientName=patient_name,
+            age=patient_age,
+            gender=patient_gender,
+            HeartRate=heart_rate,
+            PRInterval=pr_interval,
+            TestDate=formatted_date,
+            ReportDate=formatted_date,
+            date=date_obj,
+            location=location
+        )
 
-                    if not extraSpace:
-                        patient_id = extract_patient_id(first_page_text)
+        # Convert first PDF page to JPEG using PyMuPDF
+        try:
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            page = doc.load_page(0)  # first page
+            pix = page.get_pixmap(dpi=200)  # render page to image
+            img_bytes = pix.tobytes("jpeg")
 
-                    if not patient_id:
-                        missing_id.append({'id': patient_id, 'name': ecg_file.name})
-                        break
+            # Save image to ImageField
+            filename = f"{patient.PatientId}.jpg"
+            patient.image.save(filename, ContentFile(img_bytes), save=True)
 
-                    original_patient_id = patient_id
-                    suffix = 1
-                    while PatientDetails.objects.filter(PatientId=patient_id).exists():
-                        suffix += 1
-                        patient_id = f"{original_patient_id}-{suffix}"
+            success_details.append({'id': patient_id, 'name': ecg_file.name})
 
-                    if not PatientDetails.objects.filter(PatientId=patient_id).exists():
-                        patient_name = extract_patient_name(first_page_text)
-                        patient_age = extract_patient_age(first_page_text)
-                        patient_gender = extract_patient_gender(first_page_text)
-                        heart_rate = extract_heart_rate(first_page_text)
-                        pr_interval = extract_pr_interval(first_page_text)
-                        report_time = extract_report_time(first_page_text)
-                        formatted_date = extract_date(first_page_text)
+        except Exception as e:
+            processing_error.append({'id': patient_id, 'name': ecg_file.name, 'error': f"Image conversion failed: {str(e)}"})
 
-                        date_obj, created = Date.objects.get_or_create(
-                            date_field=formatted_date, location_id=location.id
-                        )
-
-                        patient = PatientDetails(
-                            PatientId=clean_text(patient_id),
-                            PatientName=clean_text(patient_name),
-                            age=clean_text(patient_age),
-                            gender=clean_text(patient_gender),
-                            HeartRate=clean_text(heart_rate),
-                            PRInterval=clean_text(pr_interval),
-                            TestDate=formatted_date,
-                            ReportDate=formatted_date,
-                            date=date_obj,
-                            location=location
-                        )
-                        patient.save()
-                        success_details.append({'id': patient_id, 'name': ecg_file.name})
-
-            # Update total ECG cases
-            total_cases, created = Total_Cases.objects.get_or_create(
-                id=1, defaults={'total_uploaded_ecg': 0}
-            )
-            total_cases.total_uploaded_ecg += len(success_details)
-            total_cases.save()
-
-            return JsonResponse({
-                'success': True,
-                'success_details': success_details,
-                'rejected_details': rejected_details,
-                'missing_id': missing_id,
-                'processing_error': processing_error,
-            })
-
-        else:
-            return JsonResponse({
-                'success': False,
-                'error': 'Form not valid',
-                'form_errors': form.errors
-            })
-
-    return JsonResponse({'success': False, 'error': 'Invalid request method. Use POST.'})
-
+    return JsonResponse({
+        'success': True,
+        'success_details': success_details,
+        'missing_id': missing_id,
+        'processing_error': processing_error
+    })
 
 @csrf_exempt
 def get_locations(request):
