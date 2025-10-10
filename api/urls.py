@@ -10,7 +10,7 @@ from .views import (
     fetch_radiologists, assign_radiologist, replace_radiologist,
     fetch_body_parts, upload_ecg_api, update_patient, ecg_stats_api,
     get_locations, get_ecg_patients, update_patient_status,
-    manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info, FetchDicomData,
+    manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info, FetchDicomData,dicom_summary_counts,get_all_institutions,search_dicom_data
 )
 from .apiurls.ECG.ecg_download import fetch_ecg_pdf_reports, download_ecg_pdf_report
 
@@ -50,6 +50,10 @@ urlpatterns = [
     path('report/finalize/', views_report.report_finalize, name='report-finalize'),
     path('report_reject/', views_report.report_reject, name='report_reject'),
     path('ecg_stat/', views_report.ecg_stat, name='ecg_stat'),
+    path('case_counts/',dicom_summary_counts , name='dicom_summary_counts'),
+    path('all_institute/',get_all_institutions , name='get_all_institutions'),
+    path('search_patient/',search_dicom_data , name='search_dicom_data'),
+    
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
