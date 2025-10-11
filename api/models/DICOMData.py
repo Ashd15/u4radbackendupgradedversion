@@ -49,6 +49,7 @@ class DICOMData(models.Model):
     imaging_views = models.CharField(max_length=500, blank=True, null=True) 
     inhouse_patient = models.BooleanField(default=False)  # In-house report?
     email = models.EmailField(max_length=254, blank=True, null=True)
+    reviewed_by = models.CharField(max_length=250, blank=True, null=True)  # Stores the name of the reviewer
 
     
     def save(self, *args, **kwargs):
