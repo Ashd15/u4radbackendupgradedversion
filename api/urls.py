@@ -52,7 +52,7 @@ urlpatterns = [
     path('ecg_stat/', views_report.ecg_stat, name='ecg_stat'),
     path('case_counts/',dicom_summary_counts , name='dicom_summary_counts'),
     path('all_institute/',get_all_institutions , name='get_all_institutions'),
-    path('search_patient/',search_dicom_data , name='search_dicom_data'),
+    
     path('search_patient/',search_dicom_data , name='search_dicom_data'),
     path('review_patient/',completed_twostep_patients , name='completed_twostep_patients'),
     path('release_patient/<int:dicom_id>/',release_patient , name='release_patient'),
