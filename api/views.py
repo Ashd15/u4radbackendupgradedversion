@@ -19,3 +19,4 @@ from api.apiurls.filters.allinstitution import  get_all_institutions
 from api.apiurls.filters.serachbynameandid import search_dicom_data
 from api.apiurls.reviwer.fetchcase import completed_twostep_patients
 from api.apiurls.reviwer.removecase import release_patient
+from api.apiurls.reviwer.reassignreason import reassign_case

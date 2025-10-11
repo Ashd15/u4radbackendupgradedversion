@@ -142,6 +142,8 @@ def fetch_tat_counters(request):
             "overdue_seconds": overdue_seconds,
             "tat_breached": tat_breached,
             "time_remaining": time_remaining_seconds,
+            "review_case": dicom. for_review,
+            "review_reason": dicom. review_reason or "N/A",
             "history_files": [
                 request.build_absolute_uri(f.history_file.url)
                 for f in dicom.history_files.all() if f.history_file

@@ -10,7 +10,7 @@ from .views import (
     fetch_radiologists, assign_radiologist, replace_radiologist,
     fetch_body_parts, upload_ecg_api, update_patient, ecg_stats_api,
     get_locations, get_ecg_patients, update_patient_status,
-    manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info, FetchDicomData,dicom_summary_counts,get_all_institutions,search_dicom_data,completed_twostep_patients,release_patient
+    manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info, FetchDicomData,dicom_summary_counts,get_all_institutions,search_dicom_data,completed_twostep_patients,release_patient,reassign_case
 )
 from .apiurls.ECG.ecg_download import fetch_ecg_pdf_reports, download_ecg_pdf_report
 
@@ -56,6 +56,7 @@ urlpatterns = [
     path('search_patient/',search_dicom_data , name='search_dicom_data'),
     path('review_patient/',completed_twostep_patients , name='completed_twostep_patients'),
     path('release_patient/<int:dicom_id>/',release_patient , name='release_patient'),
+    path('reassign_case/<int:dicom_id>/', reassign_case, name='reassign_case'),
     
 ]
 if settings.DEBUG:

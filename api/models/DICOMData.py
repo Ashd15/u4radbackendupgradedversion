@@ -50,6 +50,8 @@ class DICOMData(models.Model):
     inhouse_patient = models.BooleanField(default=False)  # In-house report?
     email = models.EmailField(max_length=254, blank=True, null=True)
     reviewed_by = models.CharField(max_length=250, blank=True, null=True)  # Stores the name of the reviewer
+    for_review = models.BooleanField(default=False)  # Flag to indicate if the case is for review
+    review_reason = models.TextField(max_length=2000, blank=True, null=True)  # Reason for review
 
     
     def save(self, *args, **kwargs):
