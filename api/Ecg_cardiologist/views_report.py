@@ -289,7 +289,8 @@ def report_preview(request):
 @permission_classes([AllowAny])
 def report_finalize(request):
     """
-    Finalize report — mark done, generate and save PDF in EcgReport model.
+    Finalize report — mark done, generate and save PDF in EcgReport model,
+    including patient location and filename with patient ID + name.
     """
     try:
         patient_id = request.data.get("patient_id")
@@ -297,27 +298,24 @@ def report_finalize(request):
         ecg_finding = request.data.get("ecg_findings")
         additional = request.data.get("additional_findings", "")
 
-        # Get doctor and patient
+        # Get doctor
         doctor = PersonalInfo.objects.filter(user__username=username).first()
         if not doctor:
             return Response({"error": "Doctor not found"}, status=404)
 
+        # Get patient
         patient = PatientDetails.objects.get(id=patient_id)
 
-        # ✅ Convert TestDate safely to date object
+        # Convert TestDate safely to date object
         if isinstance(patient.TestDate, datetime.date):
             test_date_obj = patient.TestDate
         else:
             try:
                 test_date_obj = datetime.datetime.strptime(str(patient.TestDate), "%Y-%m-%d").date()
             except Exception:
-                # fallback to today if invalid format
                 test_date_obj = datetime.date.today()
 
-        # ✅ Always use a proper date object for report_date
         report_date_obj = datetime.date.today()
-
-        # ✅ Format for displaying in response (not for DB)
         test_date_str = test_date_obj.strftime("%d-%m-%Y")
         report_date_str = report_date_obj.strftime("%d-%m-%Y")
 
@@ -326,20 +324,29 @@ def report_finalize(request):
         pdf_base64 = generate_pdf_base64(patient, doctor, report_text)
         pdf_bytes = base64.b64decode(pdf_base64)
 
-        # ✅ Save valid date objects to EcgReport model
+        # Get patient location name (handle None)
+        if patient.location:
+            patient_location = getattr(patient.location, "name", str(patient.location))
+        else:
+            patient_location = "Unknown"
+
+        # Save report with location
         report_instance = EcgReport(
             name=patient.PatientName,
-            patient_id=str(patient.id),
-            test_date=test_date_obj,        # <-- date object ✅
-            report_date=report_date_obj,    # <-- date object ✅
-            location=getattr(patient, "Location", None)
+            patient_id=str(patient.PatientId),  # Use PatientId field
+            test_date=test_date_obj,
+            report_date=report_date_obj,
+            location=patient_location
         )
 
-        filename = f"ECG_Report_{patient.PatientName}_{report_date_str}.pdf"
+        # Sanitize filename: replace spaces with underscores and remove unsafe characters
+        safe_name = "".join(c if c.isalnum() else "_" for c in patient.PatientName)
+        filename = f"{patient.PatientId}_{safe_name}_{report_date_str}.pdf"
+
         report_instance.pdf_file.save(filename, ContentFile(pdf_bytes))
         report_instance.save()
 
-        # ✅ Update patient status
+        # Update patient status
         patient.isDone = True
         patient.status = True
         patient.save()
@@ -348,8 +355,9 @@ def report_finalize(request):
             "message": "Report finalized and saved successfully.",
             "pdf_url": report_instance.get_pdf_url(),
             "pdf_base64": pdf_base64,
-            "test_date": test_date_str,      # formatted for frontend
-            "report_date": report_date_str   # formatted for frontend
+            "test_date": test_date_str,
+            "report_date": report_date_str,
+            "location": patient_location
         })
 
     except PatientDetails.DoesNotExist:
