@@ -303,38 +303,58 @@ def report_finalize(request):
 
         patient = PatientDetails.objects.get(id=patient_id)
 
-        report_text = generate_report_text(patient, ecg_finding, additional)
+        # ✅ Handle test_date formatting safely
+        test_date_str = ""
+        if patient.TestDate:
+            if isinstance(patient.TestDate, datetime.date):
+                test_date_str = patient.TestDate.strftime("%d-%m-%Y")
+            else:
+                # Already a string, try to parse if possible
+                try:
+                    test_date_obj = datetime.datetime.strptime(str(patient.TestDate), "%Y-%m-%d").date()
+                    test_date_str = test_date_obj.strftime("%d-%m-%Y")
+                except Exception:
+                    test_date_str = str(patient.TestDate)  # fallback
 
+        # ✅ Format today's date for report_date
+        report_date_obj = datetime.date.today()
+        report_date_str = report_date_obj.strftime("%d-%m-%Y")
+
+        # Generate report content
+        report_text = generate_report_text(patient, ecg_finding, additional)
         pdf_base64 = generate_pdf_base64(patient, doctor, report_text)
         pdf_bytes = base64.b64decode(pdf_base64)
 
+        # Save ECG Report
         report_instance = EcgReport(
             name=patient.PatientName,
             patient_id=str(patient.id),
-            test_date=patient.TestDate,
-            report_date=datetime.date.today(),
+            test_date=test_date_str,
+            report_date=report_date_str,
             location=patient.Location if hasattr(patient, "Location") else None
         )
 
-        filename = f"ECG_Report_{patient.PatientName}_{datetime.date.today()}.pdf"
+        filename = f"ECG_Report_{patient.PatientName}_{report_date_str}.pdf"
         report_instance.pdf_file.save(filename, ContentFile(pdf_bytes))
         report_instance.save()
 
+        # Mark patient as completed
         patient.isDone = True
         patient.status = True
         patient.save()
 
         return Response({
             "message": "Report finalized and saved successfully.",
-            "pdf_url": report_instance.get_pdf_url(),  
-            "pdf_base64": pdf_base64  
+            "pdf_url": report_instance.get_pdf_url(),
+            "pdf_base64": pdf_base64,
+            "test_date": test_date_str,
+            "report_date": report_date_str
         })
 
     except PatientDetails.DoesNotExist:
         return Response({"error": "Patient not found"}, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -368,26 +388,37 @@ def report_reject(request):
         return Response({"error": str(e)}, status=500)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
+@api_view(["GET"])
+@permission_classes([AllowAny])  # Remove this if you want authentication
 def ecg_stat(request):
     """
-    Returns ECG statistics for a doctor.
+    Returns ECG statistics for a specific doctor.
     """
     try:
         username = request.GET.get("doctor_username")
         doctor = PersonalInfo.objects.filter(user__username=username).first()
+
         if not doctor:
             return Response({"error": "Doctor not found"}, status=404)
 
-        total_reported = PatientDetails.objects.filter(isDone=True, status=True).count()
-        current_allocated = PatientDetails.objects.filter(isDone=False, status=False).count()
-        current_reported = PatientDetails.objects.filter(isDone=True).count()
+        # Use the correct foreign key field
+        total_reported = PatientDetails.objects.filter(
+            cardiologist=doctor, isDone=True, status=True
+        ).count()
+
+        current_allocated = PatientDetails.objects.filter(
+            cardiologist=doctor, isDone=False, status=False
+        ).count()
+
+        current_reported = PatientDetails.objects.filter(
+            cardiologist=doctor, isDone=True
+        ).count()
 
         return Response({
             "total_reported": total_reported,
             "current_allocated": current_allocated,
             "current_reported": current_reported
         })
+
     except Exception as e:
         return Response({"error": str(e)}, status=500)
