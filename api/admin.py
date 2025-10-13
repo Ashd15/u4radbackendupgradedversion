@@ -35,7 +35,7 @@ from .models.VitalsPdfReport import VitalsReport
 from .models.AudiometryPdfReport import AudiometryReport
 from .models.DailyCount import SetCount
 from .models.DailyCountECG import ECGSetCount
-
+from .models .ecg_client import ECGClient
 from .models .StudyReport import StudyReport
 from .models .CKEditorTemplate import CKEditorTemplate
 from .models.bodypart import BodyPart
@@ -81,8 +81,7 @@ admin.site.register(StudyReport)
 admin.site.register(DentalPatientInfo)
 admin.site.register(DoctorPatientInfo)
 admin.site.register(CKEditorTemplate)
-admin.site.register(BodyPart)
-
+admin.site.register(ECGClient)
 # Register your models here.
 class DICOMFileInline(admin.TabularInline):
     model = DICOMFile

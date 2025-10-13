@@ -10,7 +10,7 @@ from .views import (
     fetch_radiologists, assign_radiologist, replace_radiologist,
     fetch_body_parts, upload_ecg_api, update_patient, ecg_stats_api,
     get_locations, get_ecg_patients, update_patient_status,
-    manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info, FetchDicomData,dicom_summary_counts,get_all_institutions,search_dicom_data,completed_twostep_patients,release_patient,reassign_case
+    manage_cardiologist, get_cardiologists, upload_patient_ecg_api,api_logout,api_login,personal_info, FetchDicomData,dicom_summary_counts,get_all_institutions,search_dicom_data,completed_twostep_patients,release_patient,get_ecg_client
 )
 from .apiurls.ECG.ecg_download import fetch_ecg_pdf_reports, download_ecg_pdf_report
 
@@ -36,6 +36,7 @@ urlpatterns = [
     path('ecg_stats/', ecg_stats_api, name='ecg_stats_api'),
     path('ecg-reports/', fetch_ecg_pdf_reports, name='fetch_ecg_pdf_reports'),
     path('ecg-reports/download/<int:report_id>/', download_ecg_pdf_report, name='download_ecg_pdf_report'),
+    path('get-ecg-client/', get_ecg_client, name='get_ecg_client'),
     path('upload-patient-ecgs/', upload_patient_ecg_api, name='upload_patient_ecg_api'),
     path('login/', api_login, name='api_login'),
     path('logout/', api_logout, name='api_logout'),
