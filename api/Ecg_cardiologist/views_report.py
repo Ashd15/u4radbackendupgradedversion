@@ -297,48 +297,49 @@ def report_finalize(request):
         ecg_finding = request.data.get("ecg_findings")
         additional = request.data.get("additional_findings", "")
 
+        # Get doctor and patient
         doctor = PersonalInfo.objects.filter(user__username=username).first()
         if not doctor:
             return Response({"error": "Doctor not found"}, status=404)
 
         patient = PatientDetails.objects.get(id=patient_id)
 
-        # ✅ Handle test_date formatting safely
-        test_date_str = ""
-        if patient.TestDate:
-            if isinstance(patient.TestDate, datetime.date):
-                test_date_str = patient.TestDate.strftime("%d-%m-%Y")
-            else:
-                # Already a string, try to parse if possible
-                try:
-                    test_date_obj = datetime.datetime.strptime(str(patient.TestDate), "%Y-%m-%d").date()
-                    test_date_str = test_date_obj.strftime("%d-%m-%Y")
-                except Exception:
-                    test_date_str = str(patient.TestDate)  # fallback
+        # ✅ Convert TestDate safely to date object
+        if isinstance(patient.TestDate, datetime.date):
+            test_date_obj = patient.TestDate
+        else:
+            try:
+                test_date_obj = datetime.datetime.strptime(str(patient.TestDate), "%Y-%m-%d").date()
+            except Exception:
+                # fallback to today if invalid format
+                test_date_obj = datetime.date.today()
 
-        # ✅ Format today's date for report_date
+        # ✅ Always use a proper date object for report_date
         report_date_obj = datetime.date.today()
+
+        # ✅ Format for displaying in response (not for DB)
+        test_date_str = test_date_obj.strftime("%d-%m-%Y")
         report_date_str = report_date_obj.strftime("%d-%m-%Y")
 
-        # Generate report content
+        # Generate report text & PDF
         report_text = generate_report_text(patient, ecg_finding, additional)
         pdf_base64 = generate_pdf_base64(patient, doctor, report_text)
         pdf_bytes = base64.b64decode(pdf_base64)
 
-        # Save ECG Report
+        # ✅ Save valid date objects to EcgReport model
         report_instance = EcgReport(
             name=patient.PatientName,
             patient_id=str(patient.id),
-            test_date=test_date_str,
-            report_date=report_date_str,
-            location=patient.Location if hasattr(patient, "Location") else None
+            test_date=test_date_obj,        # <-- date object ✅
+            report_date=report_date_obj,    # <-- date object ✅
+            location=getattr(patient, "Location", None)
         )
 
         filename = f"ECG_Report_{patient.PatientName}_{report_date_str}.pdf"
         report_instance.pdf_file.save(filename, ContentFile(pdf_bytes))
         report_instance.save()
 
-        # Mark patient as completed
+        # ✅ Update patient status
         patient.isDone = True
         patient.status = True
         patient.save()
@@ -347,8 +348,8 @@ def report_finalize(request):
             "message": "Report finalized and saved successfully.",
             "pdf_url": report_instance.get_pdf_url(),
             "pdf_base64": pdf_base64,
-            "test_date": test_date_str,
-            "report_date": report_date_str
+            "test_date": test_date_str,      # formatted for frontend
+            "report_date": report_date_str   # formatted for frontend
         })
 
     except PatientDetails.DoesNotExist:
