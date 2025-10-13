@@ -4,6 +4,7 @@ from django.conf.urls.static import static
 
 from api.Ecg_cardiologist import views_report
 from api.Ecg_cardiologist.views_cardio import GreetingAPIView, LocationListAPIView, PatientDetailAPIView, PatientListAPIView
+from u4radbackendupgradedversion.api.apiurls.reviwer.reassignreason import reassign_case
 from .views import (
     fetch_tat_counters, server_data, dicom_list, update_dicom,
     upload_history_file, fetch_patient_reports, get_all_coordinators,
