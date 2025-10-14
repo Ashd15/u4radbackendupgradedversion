@@ -13,9 +13,10 @@ GROUP_DASHBOARD = {
     'radiologist': '/doctor-dashboard',
     'reviewer': '/viewer',
     'supercoordinator': '/superCoordinator',
-    'cardiologist': '/ecg-dashboard',
+    'ecgclient': '/ecg-patient-dashboard',
     'cardiologist': '/cardiologist-dashboard',
-    'ecgcoordinator': '/ecg-dashboard',}
+    'ecgcoordinator': '/ecg-dashboard',
+    'reviewer': '/reviewer',}
 
 @csrf_exempt
 def api_login(request):
