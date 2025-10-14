@@ -12,6 +12,7 @@ from django.db.models import Case, When, Value, IntegerField
 @login_required
 def fetch_tat_counters(request):
     user = request.user
+    
 
     # Pagination parameters
     limit = int(request.GET.get("limit", 6))  # default 10
@@ -126,7 +127,7 @@ def fetch_tat_counters(request):
                 for r in dicom.radiologist.all()
             ],
             "corporatecoordinator": [c.name for c in dicom.corporatecoordinator.all()],
-            "body_part_examined": dicom.body_part_examined or "Unknown",
+        "body_part_examined": dicom.body_part_examined or "",
             "institution_name": dicom.institution_name or "None",
             "referring_doctor_name": dicom.referring_doctor_name or "None",
             "whatsapp_number": dicom.whatsapp_number or "Unknown",
